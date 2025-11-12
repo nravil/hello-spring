@@ -1,11 +1,17 @@
 package com.example.hellospring;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+
 @RestController
 public class HelloController {
+
+    @Autowired
+    private CalculationRepository calculationRepository;
 
     @GetMapping("/hello")
     public String sayHello() {
@@ -44,16 +50,20 @@ public class HelloController {
             @RequestParam int b
     ) {
         int result = a + b;
+
+        Calculation calculation = new Calculation("add", a + " + " + b, result);
+        calculationRepository.save(calculation);
         return """
                 <h1>🧮 Калькулятор</h1>
-                        <p><b>Операция:</b> Сложение</p>
-                        <p><b>Число A:</b> %d</p>
-                        <p><b>Число B:</b> %d</p>
-                        <p><b>Результат:</b> %d + %d = <span style='color: green; font-size: 24px;'>%d</span></p>
-                                <hr>
-                                <a href='/info'>Назад к информации</a> |\s
-                                <a href='/hello'>Приветствие</a>
-                """.formatted(a, b, a, b, result);
+                <p><b>Операция:</b> Сложение</p>
+                <p><b>Число A:</b> %d</p>
+                <p><b>Число B:</b> %d</p>
+                <p><b>Результат:</b> %d + %d = <span style='color: green; font-size: 24px;'>%d</span></p>
+                <p style='color: gray;'>✅ Результат сохранен в базу данных (ID: %d)</p>
+                <hr>
+                <a href='/history'>📊 Посмотреть историю</a> |\s
+                <a href='/calculator'>🧮 Главная калькулятора</a>
+                """.formatted(a, b, a, b, result, calculation.getId());
     }
 
     // добавил метод вычитания
@@ -96,12 +106,12 @@ public class HelloController {
 
     @GetMapping("/calc/divide")
     public String divideNumbers(
-        @RequestParam double numerator,
-        @RequestParam double denominator
+            @RequestParam double numerator,
+            @RequestParam double denominator
     ) {
         double result = numerator / denominator;
-        if (numerator == 0 || denominator == 0) {
-            return "0";
+        if (denominator == 0) {
+            return "Ошибка. Делить на 0 нельзя";
         }
         return """
                 <h1>🧮 Калькулятор</h1>
@@ -112,7 +122,7 @@ public class HelloController {
                                                <hr>
                                 <a href='/info'>Назад к информации</a> |\s
                                 <a href='/hello'>Приветствие</a>
-                """.formatted(numerator,denominator,numerator,denominator,result);
+                """.formatted(numerator, denominator, numerator, denominator, result);
     }
 
     @GetMapping("/calculator")
@@ -149,5 +159,52 @@ public class HelloController {
                 </body>
                 </html>
                 """;
+    }
+
+    @GetMapping("/history")
+    public String showHistory() {
+        List<Calculation> calculations = calculationRepository.findAll();
+
+        //Проверяем есть ли данные
+        if (calculations.isEmpty()) {
+            return """
+                    <h1>📊 История вычислений</h1>
+                    <p>История пуста. Сделайте несколько вычислений!</p>
+                    <a href='/calculator'>🧮 Перейти к калькулятору</a>
+                    """;
+        }
+        //Создаем HTML таблицу для отображения
+        StringBuilder historyTable = new StringBuilder();
+        historyTable.append("""
+                <h1>📊 История вычислений</h1>
+                <table border='1' style='border-collapse: collapse; width: 100%;'>
+                    <tr style='background-color: #f0f0f0;'>
+                        <th>ID</th>
+                        <th>Операция</th>
+                        <th>Выражение</th>
+                        <th>Результат</th>
+                        <th>Время</th>
+                    </tr>
+                """);
+        //Проходим по всем записям и добавляем в таблицу
+        for (Calculation calc : calculations) {
+            historyTable.append(String.format("""
+            <tr>
+                <td>%d</td>
+                <td>%s</td>
+                <td>%s</td>
+                <td><b>%.2f</b></td>
+                <td>%s</td>
+            </tr>
+            """, calc.getId(), calc.getOperation(), calc.getExpression(),
+                    calc.getResult(), calc.getTimestamp()));
+        }
+        historyTable.append("""
+        </table>
+        <hr>
+        <a href='/calculator'>🧮 Главная калькулятора</a>
+        """);
+
+        return historyTable.toString();
     }
 }
