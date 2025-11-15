@@ -11,7 +11,7 @@ import java.util.List;
 public class HelloController {
 
     @Autowired
-    private CalculationRepository calculationRepository;
+    private CalculatorService calculatorService;
 
     @GetMapping("/hello")
     public String sayHello() {
@@ -49,10 +49,8 @@ public class HelloController {
             @RequestParam int a,
             @RequestParam int b
     ) {
-        int result = a + b;
+        CalculationResult result = calculatorService.add(a, b);
 
-        Calculation calculation = new Calculation("add", a + " + " + b, result);
-        calculationRepository.save(calculation);
         return """
                 <h1>🧮 Калькулятор</h1>
                 <p><b>Операция:</b> Сложение</p>
@@ -63,7 +61,7 @@ public class HelloController {
                 <hr>
                 <a href='/history'>📊 Посмотреть историю</a> |\s
                 <a href='/calculator'>🧮 Главная калькулятора</a>
-                """.formatted(a, b, a, b, result, calculation.getId());
+                """.formatted(a, b, a, b, (int) result.getResult(), result.getRecordId());
     }
 
     // добавил метод вычитания
@@ -72,57 +70,61 @@ public class HelloController {
             @RequestParam int x,
             @RequestParam int y
     ) {
-        int result = x - y;
+        CalculationResult result = calculatorService.subtract(x, y);
+
         return """
                 <h1>🧮 Калькулятор</h1>
                 <p><b>Операция:</b> Вычитание</p>
                 <p><b>Число X:</b> %d</p>
                 <p><b>Число Y:</b> %d</p>
                 <p><b>Результат:</b> %d - %d = <span style='color: blue; font-size: 24px;'>%d</span></p>
+                <p style='color: gray;'>✅ Результат сохранен в базу данных (ID: %d)</p>
                 <hr>
-                        <a href='/calc/add?a=10&b=5'>Пример сложения</a> |
-                        <a href='/info'>Информация</a>
-                """.formatted(x, y, x, y, result);
+                <a href='/history'>📊 Посмотреть историю</a> |\s
+                <a href='/calculator'>🧮 Главная калькулятора</a>
+                """.formatted(x, y, x, y, (int) result.getResult(), result.getRecordId());
     }
 
-    //добавил метод умноженя
+    // добавил метод умноженя
     @GetMapping("/calc/multiply")
     public String multiplyNumbers(
             @RequestParam double factor1,
             @RequestParam double factor2
     ) {
-        double result = factor1 * factor2;
+        CalculationResult result = calculatorService.multiply(factor1, factor2);
+
         return """
                 <h1>🧮 Калькулятор</h1>
                 <p><b>Операция:</b> Умножение</p>
                 <p><b>Число первый множитель:</b> %.2f</p>
                 <p><b>Число второй множитель:</b> %.2f</p>
                 <p><b>Результат:</b> %.2f * %.2f = <span style='color: red; font-size: 24px;'>%.2f</span></p>
-                                               <hr>
-                                <a href='/info'>Назад к информации</a> |\s
-                                <a href='/hello'>Приветствие</a>
-                """.formatted(factor1, factor2, factor1, factor2, result);
+                <p style='color: gray;'>✅ Результат сохранен в базу данных (ID: %d)</p>
+                <hr>
+                <a href='/history'>📊 Посмотреть историю</a> |\s
+                <a href='/calculator'>🧮 Главная калькулятора</a>
+                """.formatted(factor1, factor2, factor1, factor2, result.getResult(), result.getRecordId());
     }
 
+    // добавил метод деления
     @GetMapping("/calc/divide")
     public String divideNumbers(
             @RequestParam double numerator,
             @RequestParam double denominator
     ) {
-        double result = numerator / denominator;
-        if (denominator == 0) {
-            return "Ошибка. Делить на 0 нельзя";
-        }
+        CalculationResult result = calculatorService.divide(numerator, denominator);
+
         return """
                 <h1>🧮 Калькулятор</h1>
                 <p><b>Операция:</b> Деление</p>
                 <p><b>Числитель:</b> %.2f</p>
                 <p><b>Знаменатель:</b> %.2f</p>
                 <p><b>Результат:</b> %.2f / %.2f = <span style='color: red; font-size: 24px;'>%.2f</span></p>
-                                               <hr>
-                                <a href='/info'>Назад к информации</a> |\s
-                                <a href='/hello'>Приветствие</a>
-                """.formatted(numerator, denominator, numerator, denominator, result);
+                <p style='color: gray;'>✅ Результат сохранен в базу данных (ID: %d)</p>
+                <hr>
+                <a href='/history'>📊 Посмотреть историю</a> |\s
+                <a href='/calculator'>🧮 Главная калькулятора</a>
+                """.formatted(numerator, denominator, numerator, denominator, result.getResult(), result.getRecordId());
     }
 
     @GetMapping("/calculator")
@@ -142,20 +144,23 @@ public class HelloController {
                 <body>
                     <h1>🧮 Добро пожаловать в калькулятор!</h1>
                     <div class='menu'>
-                        <h3>Быстрые ссылки:</h3>
-                        <a href='/calc/add?a=15&b=25'>📊 15 + 25 = ?</a>
-                        <a href='/calc/subtract?x=50&y=17'>📊 50 - 17 = ?</a>
-                        <a href='/calc/multiply?factor1=123&factor2=456'>📊 123 * 456 = ?</a>
-                        <a href='/calc/divide?numerator=5&denominator=6'>📊 5 / 6 = ?</a>
-                        <a href='/info'>ℹ️ Информация о приложении</a>
-                        <a href='/hello'>👋 Приветствие</a>
-                    </div>
+                <h3>📝 Формы для ввода:</h3>
+                   <a href='/calc/add-form'>➕ Сложение (форма)</a>
+                   <a href='/calc/subtract-form'>➖ Вычитание (форма)</a>
+                   <a href='/calc/multiply-form'>✖️ Умножение (форма)</a>
+                   <a href='/calc/divide-form'>➗ Деление (форма)</a>
                 
-                    <h3>Или введи свои числа:</h3>
-                    <p>Сложение: <code>/calc/add?a=ЧИСЛО&b=ЧИСЛО</code></p>
-                    <p>Вычитание: <code>/calc/subtract?x=ЧИСЛО&y=ЧИСЛО</code></p>
-                    <p>Умножение: <code>/calc/multiply?factor1=ЧИСЛО&factor2=ЧИСЛО</code></p>
-                    <p>Деление: <code>/calc/divide?numerator=ЧИСЛО&denominator=ЧИСЛО</code></p>
+                <h3>⚡ Быстрые примеры:</h3>
+                <a href='/calc/add?a=15&b=25'>📊 15 + 25 = ?</a>
+                <a href='/calc/subtract?x=50&y=17'>📊 50 - 17 = ?</a>
+                <a href='/calc/multiply?factor1=123&factor2=456'>📊 123 * 456 = ?</a>
+                <a href='/calc/divide?numerator=5&denominator=6'>📊 5 / 6 = ?</a>
+                
+                <h3>🔍 Другое:</h3>
+                <a href='/history'>📈 История вычислений</a>
+                <a href='/info'>ℹ️ Информация о приложении</a>
+                <a href='/hello'>👋 Приветствие</a>
+                    </div>
                 </body>
                 </html>
                 """;
@@ -163,7 +168,7 @@ public class HelloController {
 
     @GetMapping("/history")
     public String showHistory() {
-        List<Calculation> calculations = calculationRepository.findAll();
+        List<Calculation> calculations = calculatorService.getCalculationHistory();
 
         //Проверяем есть ли данные
         if (calculations.isEmpty()) {
@@ -189,22 +194,166 @@ public class HelloController {
         //Проходим по всем записям и добавляем в таблицу
         for (Calculation calc : calculations) {
             historyTable.append(String.format("""
-            <tr>
-                <td>%d</td>
-                <td>%s</td>
-                <td>%s</td>
-                <td><b>%.2f</b></td>
-                <td>%s</td>
-            </tr>
-            """, calc.getId(), calc.getOperation(), calc.getExpression(),
+                            <tr>
+                                <td>%d</td>
+                                <td>%s</td>
+                                <td>%s</td>
+                                <td><b>%.2f</b></td>
+                                <td>%s</td>
+                            </tr>
+                            """, calc.getId(), calc.getOperation(), calc.getExpression(),
                     calc.getResult(), calc.getTimestamp()));
         }
         historyTable.append("""
-        </table>
-        <hr>
-        <a href='/calculator'>🧮 Главная калькулятора</a>
-        """);
+                </table>
+                <hr>
+                <a href='/calculator'>🧮 Главная калькулятора</a>
+                """);
 
         return historyTable.toString();
+    }
+
+    @GetMapping("/calc/add-form")
+    public String showAddForm() {
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Сложение</title>
+                    <style>
+                        body { font-family: Arial; margin: 40px; }
+                        .form-group { margin: 15px 0; }
+                        label { display: inline-block; width: 100px; }
+                        input { padding: 8px; width: 200px; }
+                        button { padding: 10px 20px; background: #0066cc; color: white; border: none; cursor: pointer; }
+                        button:hover { background: #004499; }
+                    </style>
+                </head>
+                <body>
+                    <h1>🧮 Сложение чисел</h1>
+                    <form action="/calc/add" method="GET">
+                        <div class="form-group">
+                            <label for="a">Число A:</label>
+                            <input type="number" id="a" name="a" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="b">Число B:</label>
+                            <input type="number" id="b" name="b" required>
+                        </div>
+                        <button type="submit">➗ Посчитать</button>
+                    </form>
+                    <hr>
+                    <a href='/calculator'>📊 Назад к калькулятору</a>
+                </body>
+                </html>
+                """;
+    }
+
+    @GetMapping("/calc/subtract-form")
+    public String showSubtractForm() {
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Вычитание</title>
+                    <style>
+                        body { font-family: Arial; margin: 40px; }
+                        .form-group { margin: 15px 0; }
+                        label { display: inline-block; width: 100px; }
+                        input { padding: 8px; width: 200px; }
+                        button { padding: 10px 20px; background: #cc6600; color: white; border: none; cursor: pointer; }
+                        button:hover { background: #994400; }
+                    </style>
+                </head>
+                <body>
+                    <h1>🧮 Вычитание чисел</h1>
+                    <form action="/calc/subtract" method="GET">
+                        <div class="form-group">
+                            <label for="x">Число X:</label>
+                            <input type="number" id="x" name="x" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="y">Число Y:</label>
+                            <input type="number" id="y" name="y" required>
+                        </div>
+                        <button type="submit">➖ Посчитать</button>
+                    </form>
+                    <hr>
+                    <a href='/calculator'>📊 Назад к калькулятору</a>
+                </body>
+                </html>
+                """;
+    }
+
+    @GetMapping("/calc/multiply-form")
+    public String showMultiplyForm() {
+        return """
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Умножение</title>
+                    <style>
+                        body { font-family: Arial; margin: 40px; }
+                        .form-group { margin: 15px 0; }
+                        label { display: inline-block; width: 100px; }
+                        input { padding: 8px; width: 200px; }
+                        button { padding: 10px 20px; background: #6600cc; color: white; border: none; cursor: pointer; }
+                        button:hover { background: #440099; }
+                    </style>
+                </head>
+                <body>
+                    <h1>🧮 Умножение чисел</h1>
+                    <form action="/calc/multiply" method="GET">
+                        <div class="form-group">
+                            <label for="factor1">Множитель 1:</label>
+                            <input type="number" step="any" id="factor1" name="factor1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="factor2">Множитель 2:</label>
+                            <input type="number" step="any" id="factor2" name="factor2" required>
+                        </div>
+                        <button type="submit">✖️ Посчитать</button>
+                    </form>
+                    <hr>
+                    <a href='/calculator'>📊 Назад к калькулятору</a>
+                </body>
+                </html>
+                """;
+    }
+
+    @GetMapping("/calc/divide-form")
+    public String showDivideForm() {
+        return """
+                <!DOCTYPE html>
+                 <html>
+                 <head>
+                     <title>Деление</title>
+                     <style>
+                         body { font-family: Arial; margin: 40px; }
+                         .form-group { margin: 15px 0; }
+                         label { display: inline-block; width: 100px; }
+                         input { padding: 8px; width: 200px; }
+                         button { padding: 10px 20px; background: #cc0066; color: white; border: none; cursor: pointer; }
+                         button:hover { background: #990044; }
+                     </style>
+                 </head>
+                 <body>
+                     <h1>🧮 Деление чисел</h1>
+                     <form action="/calc/divide" method="GET">
+                         <div class="form-group">
+                             <label for="numerator">Делимое:</label>
+                             <input type="number" step="any" id="numerator" name="numerator" required>
+                         </div>
+                         <div class="form-group">
+                             <label for="denominator">Делитель:</label>
+                             <input type="number" step="any" id="denominator" name="denominator" required>
+                         </div>
+                         <button type="submit">➗ Посчитать</button>
+                     </form>
+                     <hr>
+                     <a href='/calculator'>📊 Назад к калькулятору</a>
+                 </body>
+                 </html>
+                """;
     }
 }
