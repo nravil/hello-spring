@@ -168,7 +168,7 @@ public class HelloController {
 
     @GetMapping("/history")
     public String showHistory() {
-        List<Calculation> calculations = calculatorService.getCalculationHistory();
+        List<CalculationHistoryDTO> calculations = calculatorService.getCalculationHistory();
 
         //Проверяем есть ли данные
         if (calculations.isEmpty()) {
@@ -192,7 +192,8 @@ public class HelloController {
                     </tr>
                 """);
         //Проходим по всем записям и добавляем в таблицу
-        for (Calculation calc : calculations) {
+        // Важно использовать DTO вместо Entity
+        for (CalculationHistoryDTO dto : calculations) {
             historyTable.append(String.format("""
                             <tr>
                                 <td>%d</td>
@@ -201,8 +202,13 @@ public class HelloController {
                                 <td><b>%.2f</b></td>
                                 <td>%s</td>
                             </tr>
-                            """, calc.getId(), calc.getOperation(), calc.getExpression(),
-                    calc.getResult(), calc.getTimestamp()));
+                            """,
+                    dto.getId(),
+                    dto.getOperation(),
+                    dto.getOperationSymbol(),// Используем метод DTO
+                    dto.getExpression(),
+                    dto.getResult(),
+                    dto.getFormattedTimestamp())); // Используем метод DTO
         }
         historyTable.append("""
                 </table>
